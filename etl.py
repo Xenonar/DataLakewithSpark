@@ -17,6 +17,18 @@ os.environ['AWS_SECRET_ACCESS_KEY']=config['AWS CREDS']['AWS_SECRET_ACCESS_KEY']
 
 def create_spark_session():
     
+    '''
+    Description: This is the fuction for LOAD dataset into stage tables
+    
+    Arguments:
+        None
+        
+    Returns:
+        spark: Spark session 
+    
+    '''
+        
+
     spark = SparkSession \
         .builder \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
@@ -25,6 +37,18 @@ def create_spark_session():
 
 
 def process_song_data(spark, input_data, output_data):
+    '''
+    Description: This fuction is extracting song_data into the songs and artists tables 
+    
+    Arguments:
+        spark: connection to spark
+        input_data: link for getting data
+        output_data: link for return the data
+        
+    Returns:
+        None
+    
+    '''
     # get filepath to song data file
     song_data = input_data+'song_data/A/A/A/*.json'
     
@@ -47,8 +71,21 @@ def process_song_data(spark, input_data, output_data):
 
 
 def process_log_data(spark, input_data, output_data):
+    '''
+    Description: This fuction is extracting log_data into the TIME, USERS and SONGPLAYS tables 
+    
+    Arguments:
+        spark: connection to spark
+        input_data: link for getting data
+        output_data: link for return the data
+        
+    Returns:
+        None
+    
+    '''
     # get filepath to log data file
     log_data = input_data +"log_data/*/*/*.json"
+    #log_data = input_data +"log_data/2018/11/*.json"
 
     # read log data file
     df = spark.read.json(log_data)
@@ -77,39 +114,46 @@ def process_log_data(spark, input_data, output_data):
     time_table.write.mode("overwrite").partitionBy("year","month").parquet(output_data +"time_table/")
 
     # read in song data to use for songplays table
-    
     print('------- SongPlay Table initiate --------')
-    song_data = input_data+'song_data/*/*/*/*.json'
+    #song_data = input_data+'song_data/*/*/*/*.json'
+    song_data = input_data+'song_data/A/A/A/*.json'
     song_df = spark.read.json(song_data)
-
-    # read in song data to use for songplays table
-    song_df = spark.read.parquet(output_data + "songs_table/")
-                
+          
     # extract columns from joined song and log datasets to create songplays table
-    songplays_table = log_df.join(song_df,(song_df.artist_name == log_df.artist)&(song_df.title == log_df.song)&(log_df.length ==song_df.duration),\
-    how='left_outer').withColumn('start_time', get_datetime(log_df.ts))\
-    .select('start_time',log_df.userId.alias('user_id'),'level','song_id','artist_id',log_df\
-    .sessionId.cast(IntegerType()).alias('session_id'),'location',log_df.userAgent.alias('user_agent'))\
+    print('------- Add to SongPlay Table --------')
+    songplays_table = df.join(song_df,(song_df.artist_name == df.artist)&(song_df.title == df.song)&(df.length==song_df.duration),\
+    how='left_outer').withColumn('start_time', get_datetime(df.ts))\
+    .select('start_time',df.userId.alias('user_id'),'level','song_id','artist_id',df\
+    .sessionId.cast(IntegerType()).alias('session_id'),'location',df.userAgent.alias('user_agent'))\
     .withColumn('songplay_id', monotonically_increasing_id())
-    
+    print('------- Join to SongPlay Table --------')
     songplays_table = songplays_table.join(time_table, songplays_table.start_time == time_table.start_time, how="inner")\
     .select("songplay_id",songplays_table.start_time, "user_id", "level", "song_id", "artist_id", "session_id", "location", "user_agent", "year","month")
-
+    print('------- Write SongPlay Table --------')
     # write songplays table to parquet files partitioned by year and month
     songplays_table.write.mode("overwrite").partitionBy("year","month").parquet(output_data+"songplays_table/")
-    songplays.printSchema()
+    songplays_table.printSchema()
 
 
 def main():
+    '''
+    Description: This is the main fuction to run all the process from connecting to Spark till data process
+    
+    Arguments:
+        None
+        
+    Returns:
+        None
+    
+    '''
     spark = create_spark_session()
-    sc = spark.sparkContext
-    #sc._jsc.hadoopConfiguration().set("fs.s3a.access.key", config['AWS CREDS']['AWS_ACCESS_KEY_ID'])
-    #sc._jsc.hadoopConfiguration().set("fs.s3a.secret.key", config['AWS CREDS']['AWS_SECRET_ACCESS_KEY'])
     input_data = "s3a://udacity-dend/"
     output_data = ""
     
     process_song_data(spark, input_data, output_data)    
     process_log_data(spark, input_data, output_data)
+    print('------- END --------')
+
 
 
 if __name__ == "__main__":
