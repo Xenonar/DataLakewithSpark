@@ -50,7 +50,7 @@ def process_song_data(spark, input_data, output_data):
     
     '''
     # get filepath to song data file
-    song_data = input_data+'song_data/A/A/A/*.json'
+    song_data = input_data+'song_data/*/*/*/*.json'
     
     # read song data file
     df = spark.read.json(song_data)
@@ -85,7 +85,7 @@ def process_log_data(spark, input_data, output_data):
     '''
     # get filepath to log data file
     log_data = input_data +"log_data/*/*/*.json"
-    #log_data = input_data +"log_data/2018/11/*.json"
+  
 
     # read log data file
     df = spark.read.json(log_data)
@@ -115,8 +115,7 @@ def process_log_data(spark, input_data, output_data):
 
     # read in song data to use for songplays table
     print('------- SongPlay Table initiate --------')
-    #song_data = input_data+'song_data/*/*/*/*.json'
-    song_data = input_data+'song_data/A/A/A/*.json'
+    song_data = input_data+'song_data/*/*/*/*.json'
     song_df = spark.read.json(song_data)
           
     # extract columns from joined song and log datasets to create songplays table
